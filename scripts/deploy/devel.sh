@@ -6,7 +6,7 @@ source "$(dirname "$0")/base.sh"
 stop_docker
 
 # declare mode, use gpu by default
-mode="gpu"
+mode="cpu"
 
 # declare sim, use sim by default
 sim="True"

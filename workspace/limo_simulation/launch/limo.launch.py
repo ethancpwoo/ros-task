@@ -79,11 +79,17 @@ def generate_launch_description():
         ]
     )
 
+    limo_controller = Node(
+        package='limo_control', 
+        executable='limo_control'
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument("use_sim_time", default_value=use_sim_time),
         DeclareLaunchArgument("world_file", default_value=world_file),
         robot_state_publisher,
         gz_spawn_entity,
         gz_sim,
-        gz_ros2_bridge
+        gz_ros2_bridge,
+        limo_controller
     ])
