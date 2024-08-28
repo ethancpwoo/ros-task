@@ -40,25 +40,39 @@ private:
 
     void move_forward() {
         geometry_msgs::msg::Twist vel_msg = geometry_msgs::msg::Twist();
-        vel_msg.linear.x = 0.0;
-        vel_msg.angular.z = 0.0; 
+        vel_msg.linear.x = 1.0;
+        vel_msg.angular.z = -0.2; 
 
         cmd_vel_publisher->publish(vel_msg);
-        RCLCPP_INFO(this->get_logger(), "Publishing velocity command - Linear: %.2f, Angular: %.2f", vel_msg.linear.x, vel_msg.angular.z);
+        // RCLCPP_INFO(this->get_logger(), "Publishing velocity command - Linear: %.2f, Angular: %.2f", vel_msg.linear.x, vel_msg.angular.z);
     }
 
     void turn_robot(const float &direction) {
-        geometry_msgs::msg::Twist turn_msg = geometry_msgs::msg::Twist();
+        geometry_msgs::msg::Twist turn_left_msg = geometry_msgs::msg::Twist();
+        geometry_msgs::msg::Twist turn_right_msg = geometry_msgs::msg::Twist();
         geometry_msgs::msg::Twist stop_msg = geometry_msgs::msg::Twist();
-        turn_msg.angular.z = 0;
+
+        turn_left_msg.angular.z = 0.05;
+        turn_right_msg.angular.z = -0.05;
         stop_msg.angular.z = 0;
 
-        cmd_vel_publisher->publish(turn_msg);
-
-        // if(theta_cur -)
-
-        // cmd_vel_publisher->publish(stop_msg);
-        // turn_to_destination = true;
+        if (dest_angle > 0) {
+            cmd_vel_publisher->publish(turn_left_msg);
+            if(theta_cur >= dest_angle) {
+                cmd_vel_publisher->publish(stop_msg);
+                turn_at_destination = true;
+            }
+        }
+        if (dest_angle < 0) {
+            cmd_vel_publisher->publish(turn_right_msg);
+            if(theta_cur <= dest_angle) {
+                cmd_vel_publisher->publish(stop_msg);
+                turn_at_destination = true;
+            }
+        }
+        if (dest_angle == 0) {
+            turn_at_destination = true;
+        }
     }
 
     void run_robot() {
