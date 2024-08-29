@@ -83,7 +83,7 @@ def generate_launch_description():
         package='limo_control', 
         executable='limo_control',
         name='limo_control',
-        parameters=[LaunchConfiguration('')]
+        # parameters=[LaunchConfiguration('')]
     )
 
     plotter_node = Node(
@@ -96,7 +96,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("use_sim_time", default_value=use_sim_time),
         DeclareLaunchArgument("world_file", default_value=world_file),
-        DeclareLaunchArgument("params_file", default_value=join(limbobot_path))
+        #DeclareLaunchArgument("params_file", default_value=join(limbobot_path))
         robot_state_publisher,
         gz_spawn_entity,
         gz_sim,

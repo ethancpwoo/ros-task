@@ -31,7 +31,7 @@ private:
         x_cur = msg->pose.pose.position.x;
         y_cur = msg->pose.pose.position.y;
         theta_cur = conv_rad(msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
-        RCLCPP_INFO(this->get_logger(), "Odometry - Position (x: %.4f, y: %.4f) - Angle (theta: %.8f)", x_cur, y_cur, theta_cur);
+        // RCLCPP_INFO(this->get_logger(), "Odometry - Position (x: %.4f, y: %.4f) - Angle (theta: %.8f)", x_cur, y_cur, theta_cur);
     }
 
     float conv_rad(const float &z, const float &w) {
@@ -42,15 +42,6 @@ private:
     float calculate_direction() {
         float dir = atan((y_goal - y_cur) / (x_goal - x_cur));
         return dir;
-    }
-
-    void move_forward() {
-        geometry_msgs::msg::Twist vel_msg = geometry_msgs::msg::Twist();
-        vel_msg.linear.x = 1.0;
-        vel_msg.angular.z = -0.2; 
-
-        cmd_vel_publisher->publish(vel_msg);
-        // RCLCPP_INFO(this->get_logger(), "Publishing velocity command - Linear: %.2f, Angular: %.2f", vel_msg.linear.x, vel_msg.angular.z);
     }
 
     bool move_until(const float &x, const float &y) {
@@ -130,12 +121,19 @@ private:
         geometry_msgs::msg::Twist turn_right_msg = geometry_msgs::msg::Twist();
         geometry_msgs::msg::Twist stop_msg = geometry_msgs::msg::Twist();
 
-        turn_left_msg.angular.z = 0.2;
         turn_right_msg.angular.z = -0.2;
         stop_msg.angular.z = 0;
 
         if (direction > 0) {
-            cmd_vel_publisher->publish(turn_left_msg);
+            RCLCPP_INFO(this->get_logger(), "Theta diff: %.4f", direction - theta_cur);
+            if((direction - theta_cur) >= 0.15) {
+                turn_left_msg.angular.z = 0.2;
+                cmd_vel_publisher->publish(turn_left_msg);
+            }
+            else {
+                turn_left_msg.angular.z = 0.02;
+                cmd_vel_publisher->publish(turn_left_msg);
+            }
             if(theta_cur >= direction) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
@@ -143,7 +141,13 @@ private:
             return false;
         }
         if (direction < 0) {
-            cmd_vel_publisher->publish(turn_right_msg);
+            if((theta_cur - direction) < 0.15) {
+                cmd_vel_publisher->publish(turn_right_msg);;
+            }
+            else {
+                turn_right_msg.angular.z = 0.02;
+                cmd_vel_publisher->publish(turn_right_msg);
+            }
             if(theta_cur <= direction) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
