@@ -1,4 +1,5 @@
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
@@ -8,12 +9,17 @@ public:
 
     LimoController() : Node("limo_controller") {
         cmd_vel_publisher = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10); 
+        status_publisher = this->create_publisher<std_msgs::msg::String>("status", 10);
         odom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>(
             "odom", 10, std::bind(&LimoController::odom_callback, this, std::placeholders::_1));
         
         timer = this->create_wall_timer(std::chrono::milliseconds(500), std::bind(&LimoController::run_robot, this));
 
         dest_angle = calculate_direction();
+
+        std_msgs::msg::String status_msg = std_msgs::msg::String();
+        status_msg.data = "unready";
+        status_publisher->publish(status_msg);
 
         RCLCPP_INFO(this->get_logger(), "dest angle: %.8f", dest_angle);
         RCLCPP_INFO(this->get_logger(), "Limo Controller Node has been started.");
@@ -47,7 +53,7 @@ private:
         // RCLCPP_INFO(this->get_logger(), "Publishing velocity command - Linear: %.2f, Angular: %.2f", vel_msg.linear.x, vel_msg.angular.z);
     }
 
-    void move_until(const float &x, const float &y) {
+    bool move_until(const float &x, const float &y) {
         geometry_msgs::msg::Twist forward_msg = geometry_msgs::msg::Twist();
         geometry_msgs::msg::Twist stop_msg = geometry_msgs::msg::Twist();
 
@@ -56,80 +62,138 @@ private:
 
         cmd_vel_publisher->publish(forward_msg);
 
-        if (x > 0 && y > 0) {
+        if (x == 0 && y == 0) {
+            cmd_vel_publisher->publish(stop_msg);
+            return true;
+        }
+        else if (x == 0 && y < 0) {
+            if (y_cur <= y) {
+                cmd_vel_publisher->publish(stop_msg);
+                return true;
+            }
+            return false;
+        }
+        else if (x == 0 && y > 0) {
+            if (y_cur >= y) {
+                cmd_vel_publisher->publish(stop_msg);
+                return true;
+            }
+            return false;
+        }
+        else if (x > 0 && y == 0) {
+            if (x_cur >= x) {
+                cmd_vel_publisher->publish(stop_msg);
+                return true;
+            }
+            return false;
+        }
+        else if (x < 0 && y == 0) {
+            if (x_cur <= x) {
+                cmd_vel_publisher->publish(stop_msg);
+                return true;
+            }
+            return false;
+        }
+        else if (x > 0 && y > 0) {
             if (x_cur >= x && y_cur >= y) {
                 cmd_vel_publisher->publish(stop_msg);
-                move_to_destination = true;
+                return true;
             }
+            return false;
         }
         else if (x > 0 && y < 0){
             if (x_cur >= x && y_cur <= y) {
                 cmd_vel_publisher->publish(stop_msg);
-                move_to_destination = true;
+                return true;
             }
+            return false;
         }
         else if (x < 0 && y > 0) {
             if (x_cur <= x && y_cur >= y) {
                 cmd_vel_publisher->publish(stop_msg);
-                move_to_destination = true;
+                return true;
             }
+            return false;
 
         }
         else if (x < 0 && y < 0) {
             if (x_cur <= x && y_cur <= y) {
                 cmd_vel_publisher->publish(stop_msg);
-                move_to_destination = true;
+                return true;
             }
+            return false;
         }
     }
 
-    void turn_robot(const float &direction) {
+    bool turn_robot(const float &direction) {
         geometry_msgs::msg::Twist turn_left_msg = geometry_msgs::msg::Twist();
         geometry_msgs::msg::Twist turn_right_msg = geometry_msgs::msg::Twist();
         geometry_msgs::msg::Twist stop_msg = geometry_msgs::msg::Twist();
 
-        turn_left_msg.angular.z = 0.05;
-        turn_right_msg.angular.z = -0.05;
+        turn_left_msg.angular.z = 0.2;
+        turn_right_msg.angular.z = -0.2;
         stop_msg.angular.z = 0;
 
         if (direction > 0) {
             cmd_vel_publisher->publish(turn_left_msg);
             if(theta_cur >= direction) {
                 cmd_vel_publisher->publish(stop_msg);
-                turn_to_destination = true;
+                return true;
             }
+            return false;
         }
         if (direction < 0) {
             cmd_vel_publisher->publish(turn_right_msg);
             if(theta_cur <= direction) {
                 cmd_vel_publisher->publish(stop_msg);
-                turn_to_destination = true;
+                return true;
             }
+            return false;
         }
         if (direction == 0) {
-            turn_to_destination = true;
+            return true;
         }
     }
 
     void run_robot() {
 
+        std_msgs::msg::String status_msg = std_msgs::msg::String();
         if(!turn_to_destination) {
-            turn_robot(dest_angle);
+            if (turn_robot(dest_angle)) {
+                turn_to_destination = true;
+                status_msg.data = "record_first";
+                status_publisher->publish(status_msg);
+            }
+            status_msg.data = "unready";
+            status_publisher->publish(status_msg);
         }
         else if (!move_to_destination) {
-            RCLCPP_INFO(this->get_logger(), "move until called");
-            move_until(x_goal, y_goal);
+            if (move_until(x_goal, y_goal)) {
+                move_to_destination = true;
+            }
+            status_msg.data = "unready";
+            status_publisher->publish(status_msg);
         }
         else if (!turn_at_destination) {
-            turn_robot(theta_goal);
+            if (turn_robot(theta_goal)) {
+                turn_at_destination = true;
+                status_msg.data = "record_final";
+                status_publisher->publish(status_msg);
+            }
+            status_msg.data = "unready";
+            status_publisher->publish(status_msg);
+        }
+        else if (turn_to_destination && move_to_destination && turn_at_destination) {
+            status_msg.data = "ready";
+            status_publisher->publish(status_msg);
         }
 
     }
 
     float dest_angle;
 
-    float x_goal = 10;
-    float y_goal = 10;
+    float x_goal = 3;
+    float y_goal = 3;
     float theta_goal = 3.1415;
 
     float x_cur;
@@ -141,6 +205,7 @@ private:
     bool turn_at_destination = false;
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_publisher;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;
     rclcpp::TimerBase::SharedPtr timer;
 
