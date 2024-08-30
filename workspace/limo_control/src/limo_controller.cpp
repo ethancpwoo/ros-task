@@ -14,12 +14,14 @@ public:
             "odom", 10, std::bind(&LimoController::odom_callback, this, std::placeholders::_1));
         
         timer = this->create_wall_timer(std::chrono::milliseconds(500), std::bind(&LimoController::run_robot, this));
-
         dest_angle = calculate_direction();
 
         std_msgs::msg::String status_msg = std_msgs::msg::String();
         status_msg.data = "unready";
         status_publisher->publish(status_msg);
+
+        // set parameters and constants
+
 
         RCLCPP_INFO(this->get_logger(), "dest angle: %.8f", dest_angle);
         RCLCPP_INFO(this->get_logger(), "Limo Controller Node has been started.");
@@ -51,8 +53,7 @@ private:
         forward_msg.linear.x = 0.5;
         stop_msg.linear.x = 0;
 
-        cmd_vel_publisher->publish(forward_msg);
-
+        
         if (x == 0 && y == 0) {
             cmd_vel_publisher->publish(stop_msg);
             return true;
@@ -62,58 +63,51 @@ private:
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
         else if (x == 0 && y > 0) {
             if (y_cur >= y) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
         else if (x > 0 && y == 0) {
             if (x_cur >= x) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
         else if (x < 0 && y == 0) {
             if (x_cur <= x) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
         else if (x > 0 && y > 0) {
             if (x_cur >= x && y_cur >= y) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
         else if (x > 0 && y < 0){
             if (x_cur >= x && y_cur <= y) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
         else if (x < 0 && y > 0) {
             if (x_cur <= x && y_cur >= y) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
-
         }
         else if (x < 0 && y < 0) {
             if (x_cur <= x && y_cur <= y) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-            return false;
         }
+        cmd_vel_publisher->publish(forward_msg);
+        return false;
     }
 
     bool turn_robot(const float &direction) {
@@ -125,13 +119,13 @@ private:
         stop_msg.angular.z = 0;
 
         if (direction > 0) {
-            RCLCPP_INFO(this->get_logger(), "Theta diff: %.4f", direction - theta_cur);
+            // RCLCPP_INFO(this->get_logger(), "Theta diff: %.4f", direction - theta_cur);
             if((direction - theta_cur) >= 0.15) {
                 turn_left_msg.angular.z = 0.2;
                 cmd_vel_publisher->publish(turn_left_msg);
             }
             else {
-                turn_left_msg.angular.z = 0.02;
+                turn_left_msg.angular.z = 0.2;
                 cmd_vel_publisher->publish(turn_left_msg);
             }
             if(theta_cur >= direction) {
@@ -145,7 +139,6 @@ private:
                 cmd_vel_publisher->publish(turn_right_msg);;
             }
             else {
-                turn_right_msg.angular.z = 0.02;
                 cmd_vel_publisher->publish(turn_right_msg);
             }
             if(theta_cur <= direction) {

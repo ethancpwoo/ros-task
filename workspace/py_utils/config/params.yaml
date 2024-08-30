@@ -1,0 +1,7 @@
+params_node:
+  ros__parameters:
+    x_goal: 3.0
+    y_goal: 3.0
+    theta_goal: 3.1415
+    d_x: 0.5
+    d_theta: 0.4
