@@ -22,18 +22,26 @@ class PlotterNode(Node):
         self.odom_subscriber = self.create_subscription(Odometry, 'odom', self.record, 10)
         self.status_subscriber = self.create_subscription(String, 'status', self.get_status, 10)
         self.params_client = self.create_client(GetParameters, '/params_node/get_parameters')
-
+        self.set_params()
+    
+    def set_params(self):
         request = GetParameters.Request()
-        request.names = ['x_goal']
+        request.names = ['x_goal', 'y_goal', 'theta_goal', 'd_x', 'd_theta']
 
-        self.client.wait_for_service()
+        self.params_client.wait_for_service()
 
-        future = self.client.call_async(request)
-        future.add_done_callback(self.callback_global_param)
-    
-    def param_callback():
-        
-    
+        res = self.params_client.call_async(request)
+        res.add_done_callback(self.param_callback)
+
+    def param_callback(self, future):
+        result = future.result()
+        param = result.values
+        self.x_goal = param[0].double_value
+        self.y_goal = param[1].double_value
+        self.theta_goal = param[2].double_value
+        self.d_x = param[3].double_value
+        self.d_theta = param[4].double_value
+
     def conv_rad(self, z, w):
         return 2 * math.atan2(z, w)
     
@@ -45,54 +53,34 @@ class PlotterNode(Node):
     def get_status(self, msg):
         self.status = msg.data
         if self.status == 'ready':
-            self.plot_x_data()
-            self.plot_y_data()
+            self.plot_data("Theta", "rad")
+            self.plot_data("X", "m")
+            self.plot_data("Y", "m")
             self.destroy_node()
         elif self.status == 'record_first':
             self.first_theta = self.thetas[-1]
         elif self.status == 'record_final':
             self.final_theta = self.thetas[-1]
 
-    def plot_theta_data(self):
+    def plot_data(self, name, unit):
         plt.figure()
 
         plt.xlabel('Timestep')
-        plt.ylabel('Theta (rad)')
-        plt.title('Theta vs Timestep, d_theta = 0.2')
+        plt.ylabel(f'{name} in {unit}')
+        plt.title(f'{name} vs Timestep, d_theta = {self.d_theta}, vel = {self.d_x}')
 
-        plt.axhline(y=math.pi, color='r', label=f'final turn angle, delta = {abs(math.pi/4 - self.first_theta)}')
-        plt.axhline(y=math.pi/4, color='g', label=f'initial turn angle, delta = {abs(math.pi - self.final_theta)}')
-
-        plt.legend()
-        plt.plot(self.thetas, label = 'Theta')
-        plt.show()
-
-    def plot_x_data(self):
-
-        plt.figure()
-
-        plt.xlabel('Timestep')
-        plt.ylabel('x coordinate (m)')
-        plt.title('X vs Timestep, d_theta = 0.2, vel = 0.5')
-
-        plt.axhline(y=self.x_goal, color='r', label=f'final dist x, delta = {abs(self.x_goal - self.x_positions[-1])} m')
+        if name == "Theta":
+            plt.axhline(y=math.pi/4, color='r', label=f'final {unit}, delta = {abs(math.pi/4 - self.first_theta)}')
+            plt.axhline(y=self.theta_goal, color='g', label=f'initial {unit}, delta = {abs(self.theta_goal - self.final_theta)}')
+            plt.plot(self.thetas, label = f'{name}')
+        elif name == "X":
+            plt.axhline(y=self.x_goal, color='r', label=f'final dist x, delta = {abs(self.x_goal - self.x_positions[-1])} {unit}')
+            plt.plot(self.x_positions, label = f'{name}')
+        elif name == "Y":
+            plt.axhline(y=3, color='r', label=f'final dist x, delta = {abs(3 - self.y_positions[-1])} {unit}')
+            plt.plot(self.y_positions, label = 'Y')
 
         plt.legend()
-        plt.plot(self.thetas, label = 'X')
-        plt.show()
-
-    def plot_y_data(self):
-
-        plt.figure()
-
-        plt.xlabel('Timestep')
-        plt.ylabel('y coordinate (m)')
-        plt.title('Y vs Timestep, d_theta = 0.2, vel = 0.5')
-
-        plt.axhline(y=3, color='r', label=f'final dist x, delta = {abs(3 - self.y_positions[-1])} m')
-
-        plt.legend()
-        plt.plot(self.thetas, label = 'Y')
         plt.show()
 
 

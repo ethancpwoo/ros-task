@@ -14,20 +14,29 @@ public:
             "odom", 10, std::bind(&LimoController::odom_callback, this, std::placeholders::_1));
         
         timer = this->create_wall_timer(std::chrono::milliseconds(500), std::bind(&LimoController::run_robot, this));
-        dest_angle = calculate_direction();
+        
+        params_client = std::make_shared<rclcpp::AsyncParametersClient>(this, "/params_node");
+        params_client->wait_for_service();
+        auto future = params_client->get_parameters(
+            {"x_goal", "y_goal", "theta_goal", "d_x", "d_theta"},
+            std::bind(&LimoController::param_callback, this, std::placeholders::_1));
 
         std_msgs::msg::String status_msg = std_msgs::msg::String();
         status_msg.data = "unready";
         status_publisher->publish(status_msg);
-
-        // set parameters and constants
-
-
-        RCLCPP_INFO(this->get_logger(), "dest angle: %.8f", dest_angle);
-        RCLCPP_INFO(this->get_logger(), "Limo Controller Node has been started.");
     }
 
 private:
+
+    void param_callback(std::shared_future<std::vector<rclcpp::Parameter>> future) {
+        auto result = future.get();
+        x_goal = result.at(0).as_double();
+        y_goal = result.at(1).as_double();
+        theta_goal = result.at(2).as_double();
+        d_x = result.at(3).as_double();
+        d_theta = result.at(4).as_double();
+        dest_angle = calculate_direction();
+    }
 
     void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
         x_cur = msg->pose.pose.position.x;
@@ -42,6 +51,8 @@ private:
     }
 
     float calculate_direction() {
+        RCLCPP_INFO(this->get_logger(), "x goal = %.2f", x_goal);
+        RCLCPP_INFO(this->get_logger(), "y goal = %.2f", y_goal);
         float dir = atan((y_goal - y_cur) / (x_goal - x_cur));
         return dir;
     }
@@ -50,7 +61,7 @@ private:
         geometry_msgs::msg::Twist forward_msg = geometry_msgs::msg::Twist();
         geometry_msgs::msg::Twist stop_msg = geometry_msgs::msg::Twist();
 
-        forward_msg.linear.x = 0.5;
+        forward_msg.linear.x = d_x;
         stop_msg.linear.x = 0;
 
         
@@ -189,9 +200,11 @@ private:
 
     float dest_angle;
 
-    float x_goal = 3;
-    float y_goal = 3;
-    float theta_goal = 3.1415;
+    float x_goal;
+    float y_goal;
+    float theta_goal;
+    float d_x;
+    float d_theta;
 
     float x_cur;
     float y_cur;
@@ -205,6 +218,7 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_publisher;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;
     rclcpp::TimerBase::SharedPtr timer;
+    std::shared_ptr<rclcpp::AsyncParametersClient> params_client;
 
 };
 
