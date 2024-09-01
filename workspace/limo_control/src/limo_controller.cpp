@@ -37,10 +37,9 @@ private:
     // Main loop 
 
     void run_robot() {
-
         // RCLCPP_INFO(this->get_logger(), "Turn to destination: %d", turn_to_destination);
         if(!turn_to_destination) {
-            if (turn_until(dest_angle)) {
+            if (turn_until(init_dir, dest_angle)) {
                 turn_to_destination = true;
                 status_publisher->publish(record_first_msg);
             }
@@ -48,12 +47,14 @@ private:
         }
         else if (!move_to_destination) {
             if (move_until(x_goal, y_goal)) {
+                init_dir = theta_cur; 
                 move_to_destination = true;
             }
             status_publisher->publish(unready_msg);
         }
         else if (!turn_at_destination) {
-            if (turn_until(theta_goal)) {
+            RCLCPP_INFO(this->get_logger(), "init_dir: %.4f", init_dir);
+            if (turn_until(init_dir, theta_goal)) {
                 turn_at_destination = true;
                 status_publisher->publish(record_final_msg);
             }
@@ -77,7 +78,7 @@ private:
         }
         else if (x == 0 && y < 0 && y_cur <= y) {
             cmd_vel_publisher->publish(stop_msg);
-               return true;
+            return true;
         }
         else if (x == 0 && y > 0 && y_cur >= y) {
             cmd_vel_publisher->publish(stop_msg);
@@ -112,44 +113,69 @@ private:
         }
 
         // Continue moving forward if not
-        if (abs(y_goal - y_cur) >= threshold_dist|| abs(x_goal - x_cur) >= threshold_dist) {
-            cmd_vel_publisher->publish(forward_msg);
+        if (x != 0 && y != 0) {
+            if (abs(y - y_cur) >= threshold_dist && abs(x - x_cur) >= threshold_dist) {
+                cmd_vel_publisher->publish(forward_msg);
+            }
+            else {
+                cmd_vel_publisher->publish(forward_slow_msg);
+            }
+        }
+
+        // account for edge cases
+        else if (x == 0) {
+            if (abs(y - y_cur) >= threshold_dist) {
+                cmd_vel_publisher->publish(forward_msg);
+            }
+            else {
+                cmd_vel_publisher->publish(forward_slow_msg);
+            }
         }
         else {
-            cmd_vel_publisher->publish(forward_slow_msg);
+            if (abs(x - x_cur) >= threshold_dist) {
+                cmd_vel_publisher->publish(forward_msg);
+            }
+            else {
+                cmd_vel_publisher->publish(forward_slow_msg);
+            }
         }
         
         return false;
     }
 
-    bool turn_until(const float &direction) {
+    bool turn_until(const float &init_dir, const float &goal_dir) {
+
+        double direction = goal_dir - init_dir;
+
         RCLCPP_INFO(this->get_logger(), "Direction: %.4f", direction);
-        RCLCPP_INFO(this->get_logger(), "Theta Diff: %.4f", (theta_cur - direction));
+        RCLCPP_INFO(this->get_logger(), "Theta Diff: %.4f", (theta_cur -init_dir - direction));
         if (direction > 0) {
-            if((direction - theta_cur) >= threshold_theta) {
+            if((theta_cur - init_dir) >= direction) {
+                cmd_vel_publisher->publish(stop_msg);
+                return true;
+            }
+            if((direction - (theta_cur - init_dir)) >= threshold_theta) {
                 cmd_vel_publisher->publish(turn_left_msg);
             }
             else {
                 cmd_vel_publisher->publish(turn_left_slow_msg);
             }
-            if(theta_cur >= direction) {
+        }
+        if (direction < 0) {
+            if((theta_cur - init_dir) <= direction) {
                 cmd_vel_publisher->publish(stop_msg);
                 return true;
             }
-        }
-        if (direction < 0) {
-            if((theta_cur - direction) >= threshold_theta) {
+            if(((theta_cur - init_dir) - direction) >= threshold_theta) {
                 cmd_vel_publisher->publish(turn_right_msg);
             }
             else {
                 cmd_vel_publisher->publish(turn_right_slow_msg);
             }
-            if(theta_cur <= direction) {
-                cmd_vel_publisher->publish(stop_msg);
-                return true;
-            }
         }
-        if (direction == 0) {
+        if (direction == 0)
+        {
+            cmd_vel_publisher->publish(stop_msg);
             return true;
         }
         return false;
@@ -169,7 +195,13 @@ private:
         threshold_dist = result.at(7).as_double();
         threshold_theta = result.at(8).as_double();
 
-        dest_angle = calculate_direction();
+        if (x_goal == 0 && y_goal == 0) {
+            dest_angle = 0;
+        }
+        else {
+            dest_angle = calculate_direction();
+        }
+        
         forward_msg.linear.x = d_x;
         forward_slow_msg.linear.x = d_x_slow;
         stop_msg.linear.x = 0;
@@ -200,7 +232,15 @@ private:
 
     float calculate_direction() {
         float dir = atan((y_goal - y_cur) / (x_goal - x_cur));
-        
+        RCLCPP_INFO(this->get_logger(), "Dir: %.4f", dir);
+        if (x_goal < 0) {
+            if (dir < 0) {
+                dir = M_PI + dir;
+            }
+            else {
+                dir = -M_PI + dir;
+            }
+        }
         return dir;
     }
 
@@ -223,6 +263,8 @@ private:
     double x_cur;
     double y_cur;
     double theta_cur;
+
+    double init_dir = 0;
 
     // Flags
     bool turn_to_destination = false;

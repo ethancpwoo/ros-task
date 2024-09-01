@@ -1,16 +1,16 @@
 params_node:
   ros__parameters:
-    # Goal Parameters
-    x_goal: -3.0
-    y_goal: 3.0
-    theta_goal: 3.1415
+    # Goal Parameters (doubles)
+    x_goal: 0.0
+    y_goal: 1.0
+    theta_goal: 0.0
 
-    # Speeds
+    # Speeds (doubles)
     d_x: 0.5
     d_theta: 0.2
-    d_x_slow: 0.05
-    d_theta_slow: 0.01
+    d_x_slow: 0.01
+    d_theta_slow: 0.001
 
-    # Thresholds
-    threshold_dist: 0.2
-    threshold_theta: 0.15
+    # Thresholds (doubles)
+    threshold_dist: 0.25
+    threshold_theta: 0.1

@@ -70,7 +70,6 @@ class PlotterNode(Node):
         plt.title(f'{name} vs Timestep, d_theta = {self.d_theta}, vel = {self.d_x}')
 
         if name == "Theta":
-            plt.axhline(y=math.pi/4, color='r', label=f'final {unit}, delta = {abs(math.pi/4 - self.first_theta)}')
             plt.axhline(y=self.theta_goal, color='g', label=f'initial {unit}, delta = {abs(self.theta_goal - self.final_theta)}')
             plt.plot(self.thetas, label = f'{name}')
         elif name == "X":
