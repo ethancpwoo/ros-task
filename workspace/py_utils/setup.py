@@ -20,9 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'plotter_node = py_utils.plotter:main',
             'params_node = py_utils.params:main',
         ],
+        # if want to include plotter add 'plotter_node = py_utils.plotter:main', into console scripts
     },
     package_data={
         package_name: [

@@ -88,12 +88,12 @@ def generate_launch_description():
         name='limo_control',
     )
 
-    plotter_node = Node(
-        package='py_utils',
-        executable='plotter_node',
-        name='plotter_node',
-        output='screen',
-    )
+    # plotter_node = Node(
+    #     package='py_utils',
+    #     executable='plotter_node',
+    #     name='plotter_node',
+    #     output='screen',
+    # )
 
     params_node = Node(
         package='py_utils',
@@ -110,6 +110,6 @@ def generate_launch_description():
         gz_sim,
         gz_ros2_bridge,
         limo_controller,
-        plotter_node,
+        # plotter_node,
         params_node
     ])

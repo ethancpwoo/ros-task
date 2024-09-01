@@ -37,7 +37,7 @@ private:
     // Main loop 
 
     void run_robot() {
-        // RCLCPP_INFO(this->get_logger(), "Turn to destination: %d", turn_to_destination);
+
         if(!turn_to_destination) {
             if (turn_until(init_dir, dest_angle)) {
                 turn_to_destination = true;
@@ -53,7 +53,6 @@ private:
             status_publisher->publish(unready_msg);
         }
         else if (!turn_at_destination) {
-            RCLCPP_INFO(this->get_logger(), "init_dir: %.4f", init_dir);
             if (turn_until(init_dir, theta_goal)) {
                 turn_at_destination = true;
                 status_publisher->publish(record_final_msg);
@@ -69,8 +68,6 @@ private:
     // Robot movement functions
 
     bool move_until(const float &x, const float &y) {
-
-        RCLCPP_INFO(this->get_logger(), "X cur: %.4f, Y cur: %.4f", x_cur, y_cur);
 
         if (x == 0 && y == 0) {
             cmd_vel_publisher->publish(stop_msg);
@@ -147,8 +144,6 @@ private:
 
         double direction = goal_dir - init_dir;
 
-        RCLCPP_INFO(this->get_logger(), "Direction: %.4f", direction);
-        RCLCPP_INFO(this->get_logger(), "Theta Diff: %.4f", (theta_cur -init_dir - direction));
         if (direction > 0) {
             if((theta_cur - init_dir) >= direction) {
                 cmd_vel_publisher->publish(stop_msg);
@@ -220,7 +215,7 @@ private:
         x_cur = msg->pose.pose.position.x;
         y_cur = msg->pose.pose.position.y;
         theta_cur = conv_rad(msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
-        // RCLCPP_INFO(this->get_logger(), "Odometry - Position (x: %.4f, y: %.4f) - Angle (theta: %.8f)", x_cur, y_cur, theta_cur);
+        RCLCPP_INFO(this->get_logger(), "Odometry - Position (x: %.4f, y: %.4f) - Angle (theta: %.8f)", x_cur, y_cur, theta_cur);
     }
 
     // Util methods
@@ -232,7 +227,6 @@ private:
 
     float calculate_direction() {
         float dir = atan((y_goal - y_cur) / (x_goal - x_cur));
-        RCLCPP_INFO(this->get_logger(), "Dir: %.4f", dir);
         if (x_goal < 0) {
             if (dir < 0) {
                 dir = M_PI + dir;

@@ -1,9 +1,9 @@
 params_node:
   ros__parameters:
     # Goal Parameters (doubles)
-    x_goal: 0.0
-    y_goal: 1.0
-    theta_goal: 0.0
+    x_goal: 3.0
+    y_goal: 3.0
+    theta_goal: 3.14
 
     # Speeds (doubles)
     d_x: 0.5

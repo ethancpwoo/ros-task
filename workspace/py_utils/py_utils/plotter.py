@@ -88,3 +88,6 @@ def main(args=None):
     plotterNode = PlotterNode()
     rclpy.spin(plotterNode)
     rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
