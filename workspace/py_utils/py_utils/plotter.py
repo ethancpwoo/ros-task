@@ -77,7 +77,7 @@ class PlotterNode(Node):
             plt.axhline(y=self.x_goal, color='r', label=f'final dist x, delta = {abs(self.x_goal - self.x_positions[-1])} {unit}')
             plt.plot(self.x_positions, label = f'{name}')
         elif name == "Y":
-            plt.axhline(y=3, color='r', label=f'final dist x, delta = {abs(3 - self.y_positions[-1])} {unit}')
+            plt.axhline(y=self.y_goal, color='r', label=f'final dist y, delta = {abs(self.y_goal - self.y_positions[-1])} {unit}')
             plt.plot(self.y_positions, label = 'Y')
 
         plt.legend()
