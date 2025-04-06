@@ -14,6 +14,10 @@ add_executable(limo_control src/limo_controller.cpp)
 
 ament_target_dependencies(limo_control rclcpp geometry_msgs nav_msgs)
 
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
 install(
     TARGETS
     limo_control

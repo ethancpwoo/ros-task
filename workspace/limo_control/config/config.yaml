@@ -1,0 +1,14 @@
+limo_control:
+  ros__parameters:
+    # Robot dest parameters
+    angleThreshold: 0.01
+    distThreshold: 0.1
+    xGoal: 2.0
+    yGoal: 2.0
+    angleGoal: 3.1415
+
+    # PID control parameters
+    coeffProp: 0.1
+    coeffInt : 0.01
+    coeffDeriv: 0.01
+    

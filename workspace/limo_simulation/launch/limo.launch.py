@@ -24,10 +24,8 @@ def generate_launch_description():
 
     world_file = LaunchConfiguration("world_file", default = join(limobot_path, "worlds", "empty.sdf"))
     gz_sim_share = get_package_share_directory("ros_gz_sim")
-    params_file = join(get_package_share_directory('py_utils'), 'params.yaml')
+    limo_parameters = join(get_package_share_directory('limo_control'), 'config', 'config.yaml')
     
-    print("Params file path:", join(get_package_share_directory('py_utils'), 'config', 'params.yaml'))
-
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(join(gz_sim_share, "launch", "gz_sim.launch.py")),
         launch_arguments={
@@ -86,6 +84,9 @@ def generate_launch_description():
         package='limo_control', 
         executable='limo_control',
         name='limo_control',
+        parameters=[
+            limo_parameters
+        ]
     )
 
     # plotter_node = Node(
@@ -94,13 +95,6 @@ def generate_launch_description():
     #     name='plotter_node',
     #     output='screen',
     # )
-
-    params_node = Node(
-        package='py_utils',
-        executable='params_node',
-        name='params_node',
-        parameters=[params_file]
-    )
 
     return LaunchDescription([
         DeclareLaunchArgument("use_sim_time", default_value=use_sim_time),
@@ -111,5 +105,4 @@ def generate_launch_description():
         gz_ros2_bridge,
         limo_controller,
         # plotter_node,
-        params_node
     ])
